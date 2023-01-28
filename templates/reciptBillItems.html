@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>单据明细展示</title>
+</head>
+
+<h1>收货单明细展示</h1>
+<body>
+
+<table border="1">
+    <thead>
+        <tr>
+            <th>收货单号</th>
+            <th>商品编码</th>
+            <th>商品名称</th>
+            <th>供货关系激活价格</th>
+            <th>本次单据中单价</th>
+            <th>发货量</th>
+            <th>净收货量</th>
+            <th>收货时间</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for item in recList %}
+        <tr  style="width: 600px;border-collapse: collapse;border:1px solid" >
+            <td>{{ item.reciptBill.reciptBillNo}}</td>
+            <td>{{ item.sku.skuId}}</td>
+            <td>{{ item.unit}}</td>
+            <td>{{ item.sendQty}}</td>
+            <td>{{ item.netRecQty}}</td>
+            <td>{{ item.recQty}}</td>
+
+
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+</body>
+</html>
