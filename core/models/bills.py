@@ -4,48 +4,6 @@ from django.db.models import PROTECT, DO_NOTHING, UniqueConstraint
 from core.models import Store, StoreGoods, Supplier, GoodsSpec
 
 
-# 销售单抬头
-class SellOrder(models.Model):
-	# 销售单号
-	soNo = models.CharField(verbose_name='销售单号', max_length=50, unique=True)
-	status = models.SmallIntegerField(verbose_name='订单状态码')
-	
-	createTime = models.DateTimeField(verbose_name='下单时间')
-	finishTime = models.DateTimeField(verbose_name='完成时间')
-	
-	totalAmount = models.IntegerField(verbose_name='销售额（分）')
-	realPayTotal = models.IntegerField(verbose_name='顾客实付金额（分）')
-	realMerTotal = models.IntegerField(verbose_name='商家实收（分）')
-	deliveryFee = models.IntegerField(verbose_name='配送费（分）')
-	lunchboxFee = models.IntegerField(verbose_name='餐盒费（分）')
-	mtServiceFee = models.IntegerField(verbose_name='(美团)平台服务费（分）')
-	merActFee = models.IntegerField(verbose_name='商家活动支出（分）')
-	mtActFee = models.IntegerField(verbose_name='平台活动支出（分）')
-
-
-# 销售单明细
-class SoDetails(models.Model):
-	refSo = models.ForeignKey(verbose_name='所属销售订单号', to=SellOrder, to_field='soNo', on_delete=PROTECT)
-	# 需要指向联合主键
-	sku = models.ForeignKey(verbose_name='sku', to=StoreGoods, on_delete=PROTECT)
-	qty = models.FloatField(verbose_name='销售数量')
-	refundQty = models.FloatField(verbose_name='退货数量')
-	netQty = models.FloatField(verbose_name='净数量')
-	sellPrice = models.FloatField(verbose_name='原售价')
-	cost = models.FloatField(verbose_name='成本价')
-	purPrice = models.FloatField(verbose_name='下单时采购价')
-	
-	# 以订单号、sku及数量等来判重
-	class Meta:
-		constraints = [
-			models.UniqueConstraint(fields=["refSo", "sku", "qty", "refundQty"], name='订单号+商品+数量不重复')]
-
-
-# 美团商品对账单（回款）
-class checkBillDetails(models.Model):
-	sellOrder = models.ForeignKey(verbose_name='销售单', to=SellOrder, to_field='soNo', on_delete=PROTECT)
-
-
 # 采购单
 class PurchaseOrder(models.Model):
 	store = models.ForeignKey(verbose_name='门店', to=Store, to_field='storeNo', on_delete=PROTECT)
@@ -107,7 +65,6 @@ class supplierSoBill(models.Model):
 
 # 	采购付款单
 class poPayBill(models.Model):
-	
 	# 多对多——合并收货单付款，收货单分次付款
 	refReciptBill = models.ManyToManyField(verbose_name='关联收货单号', to=ReciptBill)
 	payAmount = models.IntegerField(verbose_name='支付金额（分）')
@@ -115,9 +72,60 @@ class poPayBill(models.Model):
 	payTime = models.DateTimeField(verbose_name='支付时间')
 
 
+# 付款单明细
 class poPayBillItems(models.Model):
 	# 多对多——合并收货单付款，收货单分次付款
 	refReciptBill = models.ManyToManyField(verbose_name='关联收货单号', to=ReciptBill)
 	payAmount = models.IntegerField(verbose_name='支付金额（分）')
 	payChannel = models.IntegerField(verbose_name='支付渠道')
 	payTime = models.DateTimeField(verbose_name='支付时间')
+
+
+# 销售单抬头
+class SellOrder(models.Model):
+	# 销售单号
+	soNo = models.CharField(verbose_name='销售单号', max_length=50, unique=True)
+	soSn = models.IntegerField(verbose_name='订单序号')
+	
+	totalAmount = models.IntegerField(verbose_name='订单总金额（分）')
+	totalGoodsAmount = models.IntegerField(verbose_name='商品原总价')
+	realPayTotal = models.IntegerField(verbose_name='订单实收金额（分）')
+	realMerTotal = models.IntegerField(verbose_name='商家实收金额（分）')
+	deliveryFee = models.IntegerField(verbose_name='配送费（分）')
+	lunchboxFee = models.IntegerField(verbose_name='餐盒费（分）')
+	
+	platformServiceFee = models.IntegerField(verbose_name='平台服务费（分）')
+	merActFee = models.IntegerField(verbose_name='商家活动支出（分）')
+	platformActFee = models.IntegerField(verbose_name='平台活动支出（分）')
+	
+	status = models.CharField(verbose_name='订单状态', max_length=50)
+	deliveryStatus = models.CharField(verbose_name='配送状态',max_length=50)
+	
+	createTime = models.DateTimeField(verbose_name='下单时间')
+	finishTime = models.CharField(verbose_name='完成时间', max_length=50)
+	refundTime = models.CharField(verbose_name='订单取消时间',max_length=50)
+
+# 销售单明细
+class SoDetails(models.Model):
+	refSo = models.ForeignKey(verbose_name='所属销售订单号', to=SellOrder, to_field='soNo', on_delete=PROTECT)
+	soType = models.CharField(verbose_name='订单类型',max_length=50)
+	
+	# 需要指向联合主键
+	sku = models.ForeignKey(verbose_name='sku', to=StoreGoods, on_delete=PROTECT)
+	qty = models.FloatField(verbose_name='销售数量')
+	refundQty = models.FloatField(verbose_name='退货数量')
+	netQty = models.FloatField(verbose_name='净数量')
+	sellPrice = models.FloatField(verbose_name='原售价')
+	cost = models.FloatField(verbose_name='成本价')
+	purPrice = models.FloatField(verbose_name='下单时采购价')
+	
+	# 以订单号、sku及数量等来判重
+	class Meta:
+		constraints = [
+			models.UniqueConstraint(fields=["refSo", "sku", "qty", "refundQty"], name='订单号+商品+数量不重复')]
+
+# 美团商品对账单（回款）
+
+
+class checkBillDetails(models.Model):
+	sellOrder = models.ForeignKey(verbose_name='销售单', to=SellOrder, to_field='soNo', on_delete=PROTECT)

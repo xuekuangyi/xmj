@@ -41,8 +41,11 @@ def importData(bizType, path, sheetNo):
 	# 获取到要被上传的sheet对象
 	sheet_obj = readExcel(path, sheetNo)
 	print(sheet_obj)
+	count = 0
 	# 对该对象进行逐行循环遍历，赋值给对应的数据库表；
 	for row in sheet_obj.iter_rows(min_row=2):
+		
+		count += 1
 
 		# 判断业务类型为1，则为导入供商数据
 		if bizType == '1':
@@ -196,27 +199,35 @@ def importData(bizType, path, sheetNo):
 			# 导入销售单抬头：
 			SellOrder.objects.create(
 				soNo=row[0].value,
-				status=transfer,
-				createTime=datetime.datetime.strptime(row[25], "%Y-%m-%d %H-%M-%S"),
-				finishTime=datetime.datetime.strptime(row[27], "%Y-%m-%d %H-%M-%S"),
-				totalAmount=row[8].value,
-				realPayTotal=row[10].value,
-				realMerTotal=row[11].value,
-				deliveryFee=row[12].value,
-				lunchboxFee=row[13].value,
-				mtServiceFee=row[14].value,
-				merActFee=row[15].value,
-				mtActFee=row[16].value
+				soSn=int(row[1].value),
+				
+				totalAmount=int(float(row[8].value)*100),
+				totalGoodsAmount=int(float(row[9].value)*100),
+				realPayTotal=int(float(row[10].value)*100),
+				realMerTotal=int(float(row[11].value)*100),
+				deliveryFee=int(float(row[12].value)*100),
+				lunchboxFee=int(float(row[13].value)*100),
+			
+				platformServiceFee=int(float(row[14].value)*100),
+				merActFee=int(float(row[15].value)*100),
+				platformActFee=int(float(row[16].value)*100),
+
+				status=row[21].value,
+				deliveryStatus=row[22].value,
+				
+				createTime=datetime.datetime.strptime(row[25].value, "%Y-%m-%d %H:%M:%S"),
+				finishTime=row[27].value,
+				refundTime=row[28].value,
 			)
 
 
-		# 判断业务类型如果为16，则为导入销售订单明细
+		# 导入销售单明细
 		elif bizType == '16':
 			# 导入销售商品明细
 		
 			SoDetails.objects.create(
-				refSo=row[2].value,
-				sku=row[18].value,
+				refSo=SellOrder.objects.filter(soNo=row[2].value),
+				sku=GoodsSpec.objects.filter(skuId=row[18].value).first(),
 				qty=row[25].value,
 				refundQty=row[33].value,
 				netQty=row[25].value - row[33].value,
@@ -226,6 +237,6 @@ def importData(bizType, path, sheetNo):
 
 			)
 			
-		
+	print(f'共执行[{count}]次')
 			
 			
