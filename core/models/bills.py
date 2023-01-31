@@ -1,22 +1,27 @@
 from django.db import models
 from django.db.models import PROTECT, DO_NOTHING, UniqueConstraint
 
-from core.models import Store, StoreGoods, Supplier, GoodsSpec
+from core.models import Store, StoreGoods, Supplier, GoodsSpec, PurchaseRelations
 
 
-# 采购单
+# 预留的超类或抽象类
+class Bill(models.Model):
+	store = models.ForeignKey(verbose_name='门店', to=Store, to_field='storeNo', on_delete=PROTECT)
+	billNo = models.CharField(verbose_name='单据号', max_length=100)
+	createTime = models.CharField(verbose_name='单据创建时间', max_length=100)
+	status = models.CharField(verbose_name='单据状态', max_length=100)
+
+
+# 采购单 暂时不用
 class PurchaseOrder(models.Model):
 	store = models.ForeignKey(verbose_name='门店', to=Store, to_field='storeNo', on_delete=PROTECT)
-	poNo = models.CharField(verbose_name='销售单号', max_length=50, unique=True)
-	purPrice = models.BigIntegerField(verbose_name='本次采购价')
-	
-	realMerTotal = models.IntegerField(verbose_name='商家实收金额')
+	poNo = models.CharField(verbose_name='销售单号', max_length=50, primary_key=True)
 
 
 # 收货单抬头
-class ReciptBill(models.Model):
-	reciptBillNo = models.CharField(verbose_name='收货单号', max_length=200, primary_key=True)
-	store = models.ForeignKey(verbose_name='门店', to='Store', to_field='storeNo', on_delete=PROTECT, default=15307602)
+class ReceiptBill(models.Model):
+	receiptBillNo = models.CharField(verbose_name='收货单号', max_length=200, primary_key=True)
+	store = models.ForeignKey(verbose_name='门店', to='Store', to_field='storeNo', on_delete=PROTECT)
 	supplier = models.ForeignKey(verbose_name='供商', to=Supplier, to_field='supplierNo', on_delete=models.CASCADE)
 	source = models.CharField(verbose_name='单据来源', max_length=200)
 	# 后台要改成对象
@@ -26,9 +31,8 @@ class ReciptBill(models.Model):
 
 
 # 收货单明细
-
-class ReciptBillItems(models.Model):
-	reciptBill = models.ForeignKey(verbose_name='收货单', to=ReciptBill, to_field='reciptBillNo', on_delete=PROTECT)
+class ReceiptBillItems(models.Model):
+	receiptBill = models.ForeignKey(verbose_name='收货单', to=ReceiptBill, to_field='receiptBillNo', on_delete=PROTECT)
 	sku = models.ForeignKey(verbose_name='SKU', to=GoodsSpec, to_field='skuId', on_delete=PROTECT)
 	unit = models.CharField(verbose_name='发货单位', max_length=100)
 	
@@ -50,7 +54,7 @@ class ReciptBillItems(models.Model):
 	
 	# 针对可能存在多次导入的场景，所以必须增加联合主键
 	class Meta:
-		constraints = [models.UniqueConstraint(fields=["reciptBill", "sku", "receiveTime", ], name='收货单+商品不重复')]
+		constraints = [models.UniqueConstraint(fields=["receiptBill", "sku", "receiveTime", ], name='收货单+商品不重复')]
 
 
 # 供商销售单
@@ -66,7 +70,7 @@ class supplierSoBill(models.Model):
 # 	采购付款单
 class poPayBill(models.Model):
 	# 多对多——合并收货单付款，收货单分次付款
-	refReciptBill = models.ManyToManyField(verbose_name='关联收货单号', to=ReciptBill)
+	refReceiptBill = models.ManyToManyField(verbose_name='关联收货单号', to=ReceiptBill)
 	payAmount = models.IntegerField(verbose_name='支付金额（分）')
 	payChannel = models.IntegerField(verbose_name='支付渠道')
 	payTime = models.DateTimeField(verbose_name='支付时间')
@@ -75,7 +79,7 @@ class poPayBill(models.Model):
 # 付款单明细
 class poPayBillItems(models.Model):
 	# 多对多——合并收货单付款，收货单分次付款
-	refReciptBill = models.ManyToManyField(verbose_name='关联收货单号', to=ReciptBill)
+	refReceiptBill = models.ManyToManyField(verbose_name='关联收货单号', to=ReceiptBill)
 	payAmount = models.IntegerField(verbose_name='支付金额（分）')
 	payChannel = models.IntegerField(verbose_name='支付渠道')
 	payTime = models.DateTimeField(verbose_name='支付时间')
@@ -83,8 +87,8 @@ class poPayBillItems(models.Model):
 
 # 销售单抬头
 class SellOrder(models.Model):
-	# 销售单号
-	soNo = models.CharField(verbose_name='销售单号', max_length=50, unique=True)
+	store = models.ForeignKey(verbose_name='门店', to='Store', to_field='storeNo', on_delete=PROTECT, default=1031328)
+	soNo = models.CharField(verbose_name='销售单号', max_length=50,primary_key=True)
 	soSn = models.IntegerField(verbose_name='订单序号')
 	
 	totalAmount = models.IntegerField(verbose_name='订单总金额（分）')
@@ -99,33 +103,50 @@ class SellOrder(models.Model):
 	platformActFee = models.IntegerField(verbose_name='平台活动支出（分）')
 	
 	status = models.CharField(verbose_name='订单状态', max_length=50)
-	deliveryStatus = models.CharField(verbose_name='配送状态',max_length=50)
+	deliveryStatus = models.CharField(verbose_name='配送状态', max_length=50)
 	
 	createTime = models.DateTimeField(verbose_name='下单时间')
 	finishTime = models.CharField(verbose_name='完成时间', max_length=50)
-	refundTime = models.CharField(verbose_name='订单取消时间',max_length=50)
+	refundTime = models.CharField(verbose_name='订单取消时间', max_length=50)
+
 
 # 销售单明细
 class SoDetails(models.Model):
 	refSo = models.ForeignKey(verbose_name='所属销售订单号', to=SellOrder, to_field='soNo', on_delete=PROTECT)
-	soType = models.CharField(verbose_name='订单类型',max_length=50)
 	
-	# 需要指向联合主键
-	sku = models.ForeignKey(verbose_name='sku', to=StoreGoods, on_delete=PROTECT)
+	# 商品
+	sku = models.ForeignKey(verbose_name='sku', to=GoodsSpec, to_field='skuId', on_delete=PROTECT)
+	upc = models.CharField(verbose_name='UPC', max_length=100)
+	specName = models.CharField(verbose_name='规格名称', max_length=100)
+	unitName = models.CharField(verbose_name='单位名称', max_length=100)
+	# 数量
 	qty = models.FloatField(verbose_name='销售数量')
+	isRefundGoods = models.CharField(verbose_name='是否为退款商品', max_length=100)
 	refundQty = models.FloatField(verbose_name='退货数量')
 	netQty = models.FloatField(verbose_name='净数量')
-	sellPrice = models.FloatField(verbose_name='原售价')
-	cost = models.FloatField(verbose_name='成本价')
-	purPrice = models.FloatField(verbose_name='下单时采购价')
+	# 价格及成本
+	sellGoodsPrice = models.IntegerField(verbose_name='商品原销售单价（分）')
+	# refPurRela = models.ForeignKey(verbose_name='关联供货关系', to=PurchaseRelations,on_delete=PROTECT)
+	# refGoodsCost = models.IntegerField(verbose_name='关联供货关系价格',default=0)
+	# 收入及补贴
+	goodsSellAmount = models.IntegerField(verbose_name='原售价销售额小计(分)')
+	goodsRealPayAmount = models.IntegerField(verbose_name='商品实付金额（分）')
+	goodsRefundAmount = models.IntegerField(verbose_name='退款商品金额（分）')
+	goodsPerkTotalAmount = models.IntegerField(verbose_name='商品总补贴金额（分）')
+	goodsPerkMerAmount = models.IntegerField(verbose_name='商品商家补贴金额 (分)')
+	goodsPerkPlatformAmount = models.IntegerField(verbose_name='商品平台补贴金额 (分)')
+	
+	refundTime = models.CharField(verbose_name='退款时间', max_length=100)
 	
 	# 以订单号、sku及数量等来判重
 	class Meta:
 		constraints = [
-			models.UniqueConstraint(fields=["refSo", "sku", "qty", "refundQty"], name='订单号+商品+数量不重复')]
+			models.UniqueConstraint(fields=["refSo", "sku", "qty", "goodsPerkTotalAmount", "refundQty"],
+			                        name='订单号+商品+数量不重复')]
+
+
+
 
 # 美团商品对账单（回款）
-
-
 class checkBillDetails(models.Model):
 	sellOrder = models.ForeignKey(verbose_name='销售单', to=SellOrder, to_field='soNo', on_delete=PROTECT)

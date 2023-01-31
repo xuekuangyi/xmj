@@ -21,5 +21,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 	path('upload',views.upload),
 	path('showReciptBillItems',views.showReciptBillItems),
-	path('mainOp',views.mainOp)
+	path('mainOp',views.mainOp),
+	path('login',views.login_views),
+	path('frontPage/',views.manage_login)
 ]
