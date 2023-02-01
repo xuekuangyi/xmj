@@ -300,7 +300,49 @@ def importData(bizType, path, sheetNo):
 			except AttributeError as error:
 				print(f'异常类型【{error}】订单号:{row[2].value},sku:{row[18].value}')
 		
+		# 导入采购计划
 		elif bizType == '17':
+			# 预处理
+			status = 0
+			if row[11].value == '收货中':
+				status = 1
+			elif row[11].value == '已完成':
+				status = 2
+			# 创建采购计划
+			
+			PurchasePlanItems.objects.create(
+				store=Store.objects.filter(storeNo=row[2].value),
+				planNo=row[12].value
+			)
+			
+			PurchasePlanItems.objects.create(
+				purchasePlan = PurchasePlan.objects.filter(
+					store=Store.objects.filter(storeNo=row[2].value).first(),
+					planNo=row[12].value
+				),
+				sku=GoodsSpec.objects.create(
+					GoodsSpec.objects.filter(skuId=row[18].value).first()
+				),
+				unit=row[14].value,
+				supplier=Supplier.objects.filter(supplierName=row[13].value).first(),
+				purQty=row[15].value,
+				purPrice=row[17].value,
+				purAmount=row[18].value,
+				receiptQty=row[22].value,
+				offset=row[24].value,
+				status=status
+			)
+			
+			
+			
+			
+			
+	
+	
+	
+	
+	
+		elif bizType == 30:
 			# 预处理
 			file_status = 0
 			if row[3].value == '出勤':
@@ -309,14 +351,14 @@ def importData(bizType, path, sheetNo):
 				file_status = 1
 			
 			
-			OnSale.objects.create(
-				date_by_day=row[0].value,
-				sku = GoodsSpec.objects.filter(skuId=row[18].value).first(),
-				yesterday_show_hours=
-				status=
-			
-			
-			)
+			# OnSale.objects.create(
+			# 	date_by_day=row[0].value,
+			# 	sku = GoodsSpec.objects.filter(skuId=row[18].value).first(),
+			# 	yesterday_show_hours=
+			# 	status=
+			#
+			#
+			# )
 			
 			
 	print(f'共执行[{count}]次')

@@ -12,10 +12,34 @@ class Bill(models.Model):
 	status = models.CharField(verbose_name='单据状态', max_length=100)
 
 
-# 采购单 暂时不用
-class PurchaseOrder(models.Model):
+# 采购单
+class PurchasePlan(models.Model):
 	store = models.ForeignKey(verbose_name='门店', to=Store, to_field='storeNo', on_delete=PROTECT)
-	poNo = models.CharField(verbose_name='销售单号', max_length=50, primary_key=True)
+	planNo = models.CharField(verbose_name='销售单号', max_length=50, primary_key=True)
+
+
+class PurchasePlanItems(models.Model):
+	purchasePlan = models.ForeignKey(verbose_name='po单', to=PurchasePlan, to_field='planNo',on_delete=PROTECT)
+	sku = models.ForeignKey(verbose_name='sku', to=GoodsSpec, to_field='skuId', on_delete=PROTECT)
+	unit = models.CharField(verbose_name='采购单位', max_length=100)
+	
+	supplier = models.ForeignKey(verbose_name='供商', to=Supplier, to_field='supplierNo', on_delete=models.CASCADE)
+	
+	purQty = models.FloatField(verbose_name='采购数量')
+	purPrice = models.IntegerField(verbose_name='采购单价(分)')
+	purAmount = models.IntegerField(verbose_name='采购金额小计（分）')
+	
+	status = models.SmallIntegerField(verbose_name='采购商品状态')
+	
+	receiptQty = models.FloatField(verbose_name='实收数量')
+	offset = models.FloatField(verbose_name='差异数量')
+	
+	createTime = models.CharField(verbose_name='订单创建时间',max_length=50)
+	
+	class Meta:
+		constraints = [
+			models.UniqueConstraint(fields=["purchasePlan", "sku" ], name='采购计划单+商品不重复')]
+	
 
 
 # 收货单抬头
@@ -54,7 +78,8 @@ class ReceiptBillItems(models.Model):
 	
 	# 针对可能存在多次导入的场景，所以必须增加联合主键
 	class Meta:
-		constraints = [models.UniqueConstraint(fields=["receiptBill", "sku", "receiveTime", ], name='收货单+商品不重复')]
+		constraints = [
+			models.UniqueConstraint(fields=["receiptBill", "sku", "receiveTime", ], name='收货单+商品不重复')]
 
 
 # 供商销售单
@@ -88,7 +113,7 @@ class poPayBillItems(models.Model):
 # 销售单抬头
 class SellOrder(models.Model):
 	store = models.ForeignKey(verbose_name='门店', to='Store', to_field='storeNo', on_delete=PROTECT, default=1031328)
-	soNo = models.CharField(verbose_name='销售单号', max_length=50,primary_key=True)
+	soNo = models.CharField(verbose_name='销售单号', max_length=50, primary_key=True)
 	soSn = models.IntegerField(verbose_name='订单序号')
 	
 	totalAmount = models.IntegerField(verbose_name='订单总金额（分）')
@@ -143,8 +168,6 @@ class SoDetails(models.Model):
 		constraints = [
 			models.UniqueConstraint(fields=["refSo", "sku", "qty", "goodsPerkTotalAmount", "refundQty"],
 			                        name='订单号+商品+数量不重复')]
-
-
 
 
 # 美团商品对账单（回款）
